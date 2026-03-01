@@ -1,0 +1,16 @@
+# Binaries
+bin/
+create-go-app
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test output
+/test-output/

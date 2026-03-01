@@ -1,0 +1,93 @@
+// Package client provides an HTTP client with TLS fingerprinting and proxy support.
+package client
+
+import (
+	"fmt"
+	"net/url"
+
+	utls "github.com/refraction-networking/utls"
+	http "github.com/saucesteals/fhttp"
+	"github.com/saucesteals/mimic"
+)
+
+const (
+	defaultBrowserVersion = "144.0.0.0"
+)
+
+// Option configures a Client.
+type Option func(*Client)
+
+// WithBrowserVersion sets the Chrome version for TLS fingerprinting.
+func WithBrowserVersion(version string) Option {
+	return func(c *Client) { c.browserVersion = version }
+}
+
+// WithProxy sets the proxy URL.
+func WithProxy(proxyURL string) Option {
+	return func(c *Client) { c.proxyURL = proxyURL }
+}
+
+// Client is an HTTP client with TLS fingerprinting and proxy support.
+type Client struct {
+	HTTP *http.Client
+
+	browserVersion string
+	proxyURL       string
+}
+
+// New creates a new HTTP client with TLS fingerprinting.
+func New(opts ...Option) (*Client, error) {
+	c := &Client{
+		browserVersion: defaultBrowserVersion,
+	}
+
+	for _, opt := range opts {
+		opt(c)
+	}
+
+	var proxy func(r *http.Request) (*url.URL, error)
+	if c.proxyURL != "" {
+		u, err := url.Parse(c.proxyURL)
+		if err != nil {
+			return nil, fmt.Errorf("parsing proxy URL: %w", err)
+		}
+		proxy = http.ProxyURL(u)
+	}
+
+	httpTransport := &http.Transport{
+		TLSClientConfig: &utls.Config{
+			InsecureSkipVerify:     true,
+			SessionTicketsDisabled: true,
+		},
+		DisableCompression: true,
+		Proxy:              proxy,
+		DisableKeepAlives:  true,
+	}
+
+	transport, err := mimic.NewTransport(mimic.TransportOptions{
+		Version:   c.browserVersion,
+		Brand:     mimic.BrandChrome,
+		Platform:  mimic.PlatformWindows,
+		Transport: httpTransport,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("creating mimic transport: %w", err)
+	}
+
+	c.HTTP = &http.Client{
+		Transport: transport,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+
+	return c, nil
+}
+
+// UserAgent returns the default User-Agent header from the mimic transport.
+func (c *Client) UserAgent() string {
+	if transport, ok := c.HTTP.Transport.(*mimic.Transport); ok {
+		return transport.DefaultHeaders.Get("user-agent")
+	}
+	return ""
+}

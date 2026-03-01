@@ -1,0 +1,62 @@
+-include .env
+export
+
+.PHONY: lint format test build dev
+{{- if has "docker"}}
+.PHONY: up down watch
+{{- end}}
+{{- if has "postgres"}}
+.PHONY: db db-down migrate migrate-down migrate-new generate
+{{- end}}
+{{- if has "docker"}}
+
+# Docker Commands
+up:
+	docker compose up -d
+
+down:
+	docker compose down
+
+watch:
+	docker compose watch
+{{- end}}
+{{- if has "postgres"}}
+
+# Database
+db:
+	docker compose --profile postgres up -d postgres
+
+db-down:
+	docker compose --profile postgres down
+
+# Migrations
+migrate:
+	goose -dir pkg/db/migrations postgres $(DATABASE_URL) up
+
+migrate-down:
+	goose -dir pkg/db/migrations postgres $(DATABASE_URL) down
+
+migrate-new:
+	@read -p "Migration name: " name && \
+	goose -dir pkg/db/migrations create $$name sql
+
+# Code Generation
+generate:
+	go generate ./...
+{{- end}}
+
+# Go Commands
+lint:
+	go vet ./...
+
+format:
+	go fmt ./...
+
+test:
+	go test -race ./...
+
+build:
+	go build -o bin/{{.ProjectName}} ./cmd/app
+
+dev:
+	go run ./cmd/app

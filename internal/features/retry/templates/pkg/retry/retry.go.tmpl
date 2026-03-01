@@ -1,0 +1,90 @@
+// Package retry provides a generic retry loop with exponential backoff and
+// full jitter for transient-error recovery.
+package retry
+
+import (
+	"context"
+	"fmt"
+	"math"
+	"math/rand/v2"
+	"time"
+)
+
+// Option configures the retry behavior.
+type Option func(*config)
+
+const (
+	defaultMaxAttempts  = 3
+	defaultInitialDelay = 1 * time.Second
+	defaultMaxDelay     = 10 * time.Second
+	defaultMultiplier   = 2.0
+)
+
+type config struct {
+	maxAttempts  int
+	initialDelay time.Duration
+	maxDelay     time.Duration
+	multiplier   float64
+}
+
+// WithMaxAttempts sets the maximum number of attempts (including the first).
+func WithMaxAttempts(n int) Option {
+	return func(c *config) { c.maxAttempts = n }
+}
+
+// WithInitialDelay sets the base delay before the first retry.
+func WithInitialDelay(d time.Duration) Option {
+	return func(c *config) { c.initialDelay = d }
+}
+
+// WithMaxDelay caps the backoff delay.
+func WithMaxDelay(d time.Duration) Option {
+	return func(c *config) { c.maxDelay = d }
+}
+
+// WithMultiplier sets the exponential growth factor.
+func WithMultiplier(m float64) Option {
+	return func(c *config) { c.multiplier = m }
+}
+
+// Do calls fn until it returns nil, the context is cancelled, or maxAttempts
+// is reached.
+func Do(ctx context.Context, fn func(ctx context.Context) error, opts ...Option) error {
+	cfg := config{
+		maxAttempts:  defaultMaxAttempts,
+		initialDelay: defaultInitialDelay,
+		maxDelay:     defaultMaxDelay,
+		multiplier:   defaultMultiplier,
+	}
+	for _, opt := range opts {
+		opt(&cfg)
+	}
+
+	var lastErr error
+	for attempt := range cfg.maxAttempts {
+		lastErr = fn(ctx)
+		if lastErr == nil {
+			return nil
+		}
+
+		if attempt == cfg.maxAttempts-1 {
+			break
+		}
+
+		delay := float64(cfg.initialDelay) * math.Pow(cfg.multiplier, float64(attempt))
+		if delay > float64(cfg.maxDelay) {
+			delay = float64(cfg.maxDelay)
+		}
+
+		timer := time.NewTimer(time.Duration(rand.Int64N(int64(delay) + 1)))
+
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return ctx.Err()
+		case <-timer.C:
+		}
+	}
+
+	return fmt.Errorf("after %d attempts: %w", cfg.maxAttempts, lastErr)
+}

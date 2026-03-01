@@ -1,0 +1,33 @@
+package client
+
+import (
+	"context"
+	"fmt"
+	"io"
+
+	http "github.com/saucesteals/fhttp"
+)
+
+// Do sends an HTTP request and returns the response.
+func (c *Client) Do(req *http.Request) (*http.Response, error) {
+	return c.HTTP.Do(req)
+}
+
+// Get sends a GET request.
+func (c *Client) Get(ctx context.Context, url string) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("creating request: %w", err)
+	}
+	return c.Do(req)
+}
+
+// Post sends a POST request.
+func (c *Client) Post(ctx context.Context, url string, contentType string, body io.Reader) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, body)
+	if err != nil {
+		return nil, fmt.Errorf("creating request: %w", err)
+	}
+	req.Header.Set("content-type", contentType)
+	return c.Do(req)
+}

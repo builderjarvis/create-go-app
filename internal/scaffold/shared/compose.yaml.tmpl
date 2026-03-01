@@ -1,0 +1,19 @@
+{{- if has "docker"}}
+services:
+  app:
+    build:
+      context: .
+      target: dev
+    env_file:
+      - .env
+    develop:
+      watch:
+        - action: rebuild
+          path: .
+          ignore:
+            - .git/
+{{- range injections "compose_services"}}
+
+{{.}}
+{{- end}}
+{{- end}}

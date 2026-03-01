@@ -1,0 +1,60 @@
+// Package db wraps pgxpool with transaction helpers.
+//
+//go:generate sqlc generate -f sqlc.yaml
+package db
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+)
+
+// DB provides a connection pool with transaction support.
+type DB struct {
+	pool *pgxpool.Pool
+}
+
+// New creates a new database connection pool and pings to verify connectivity.
+func New(ctx context.Context, url string) (*DB, error) {
+	pool, err := pgxpool.New(ctx, url)
+	if err != nil {
+		return nil, fmt.Errorf("create pool: %w", err)
+	}
+
+	if err := pool.Ping(ctx); err != nil {
+		return nil, fmt.Errorf("ping database: %w", err)
+	}
+
+	return &DB{pool: pool}, nil
+}
+
+// Close shuts down the connection pool.
+func (d *DB) Close() {
+	d.pool.Close()
+}
+
+// Pool returns the underlying connection pool.
+func (d *DB) Pool() *pgxpool.Pool {
+	return d.pool
+}
+
+// InTx executes fn inside a database transaction.
+func (d *DB) InTx(ctx context.Context, fn func(tx pgx.Tx) error) error {
+	tx, err := d.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin transaction: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	if err := fn(tx); err != nil {
+		return err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("commit transaction: %w", err)
+	}
+
+	return nil
+}

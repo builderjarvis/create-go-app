@@ -1,0 +1,29 @@
+{{- if has "docker"}}
+# Build stage
+FROM golang:{{.GoVersion}}-alpine AS builder
+
+WORKDIR /app
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+RUN CGO_ENABLED=0 go build -o /bin/app ./cmd/app
+
+# Development stage
+FROM golang:{{.GoVersion}}-alpine AS dev
+
+WORKDIR /app
+COPY . .
+
+RUN go build -o /bin/app ./cmd/app
+CMD ["/bin/app"]
+
+# Production stage
+FROM alpine:3.21 AS production
+
+RUN apk --no-cache add ca-certificates
+COPY --from=builder /bin/app /bin/app
+
+ENTRYPOINT ["/bin/app"]
+{{- end}}

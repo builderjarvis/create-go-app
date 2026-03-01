@@ -1,0 +1,44 @@
+package main
+
+import (
+	"context"
+	"log/slog"
+	"os"
+	"os/signal"
+	"syscall"
+
+	"{{.ModulePath}}/pkg/env"
+	_ "{{.ModulePath}}/pkg/log" // structured logger init
+{{- range injections "main_imports"}}
+	{{.}}
+{{- end}}
+)
+
+func main() {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	config, err := env.New()
+	if err != nil {
+		slog.ErrorContext(ctx, "failed to load config", "error", err)
+		os.Exit(1)
+	}
+
+	if err := run(ctx, config); err != nil {
+		slog.ErrorContext(ctx, "failed to run", "error", err)
+		os.Exit(1)
+	}
+}
+
+func run(ctx context.Context, config *env.Config) error {
+	slog.InfoContext(ctx, "{{.ProjectName}} started")
+{{range injections "main_init"}}
+	{{.}}
+{{end}}
+	_ = config
+	_ = ctx
+
+	// TODO: Add your application logic here.
+
+	return nil
+}
