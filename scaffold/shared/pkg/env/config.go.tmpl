@@ -12,12 +12,8 @@ import (
 //
 // Tag format: `env:"VAR_NAME"` or `env:"VAR_NAME,required"`
 type Config struct {
-	LogLevel string `env:"LOG_LEVEL"`
-{{- if has "postgres"}}
-	DatabaseURL string `env:"DATABASE_URL,required"`
-{{- end}}
-{{- range injections "config_fields"}}
-	{{.}}
+{{- range .ConfigFields}}
+	{{.Name}} {{.Type}} `env:"{{.Key}}{{if .Required}},required{{end}}"`
 {{- end}}
 }
 

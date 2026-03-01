@@ -21,5 +21,13 @@ func installBase(ctx *Context) error {
 	// State file locking on Windows needs x/sys.
 	ctx.AddPackage("golang.org/x/sys")
 
+	// Register the base config field.
+	ctx.AddConfig(ConfigField{
+		Name:  "LogLevel",
+		Key:   "LOG_LEVEL",
+		Value: "info",
+		Type:  "string",
+	})
+
 	return ctx.WriteTemplateDir(baseTemplates, "base", "")
 }

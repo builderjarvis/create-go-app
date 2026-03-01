@@ -43,7 +43,6 @@ func Generate(cfg Config) error {
 		GoVersion:   cfg.GoVersion,
 		ProjectDir:  projectDir,
 		Active:      make(map[string]Feature),
-		Injections:  make(map[string][]string),
 	}
 
 	for _, f := range features {

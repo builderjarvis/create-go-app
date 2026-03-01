@@ -9,6 +9,16 @@ import (
 	"text/template"
 )
 
+// ConfigField describes a single environment variable that gets rendered into
+// the generated Config struct and .env.example file.
+type ConfigField struct {
+	Name     string // Go field name, e.g. "DatabaseURL"
+	Key      string // Env var name, e.g. "DATABASE_URL"
+	Value    string // Default value for .env.example, e.g. "postgres://localhost:5432/app"
+	Type     string // Go type, e.g. "string"
+	Required bool
+}
+
 // Context is the shared state passed to every feature's Install method.
 type Context struct {
 	// ProjectName is the directory/app name (e.g., "my-app").
@@ -26,11 +36,13 @@ type Context struct {
 	// Active holds all resolved features by name.
 	Active map[string]Feature
 
-	// Injections collects content that features inject into shared files.
-	Injections map[string][]string
-
 	// Packages collects package paths for `go get`.
 	Packages []string
+
+	// ConfigFields holds the ordered list of env config fields contributed by
+	// base and each feature. Templates range over this to render Config struct
+	// and .env.example.
+	ConfigFields []ConfigField
 }
 
 // Has returns true if a feature is active.
@@ -39,14 +51,14 @@ func (c *Context) Has(name string) bool {
 	return ok
 }
 
-// Inject adds content to a named injection point.
-func (c *Context) Inject(point string, content string) {
-	c.Injections[point] = append(c.Injections[point], content)
-}
-
 // AddPackage adds a Go module dependency.
 func (c *Context) AddPackage(pkg string) {
 	c.Packages = append(c.Packages, pkg)
+}
+
+// AddConfig appends a ConfigField to the context.
+func (c *Context) AddConfig(field ConfigField) {
+	c.ConfigFields = append(c.ConfigFields, field)
 }
 
 // WriteFile writes content to a file relative to ProjectDir, creating directories as needed.
@@ -115,22 +127,19 @@ func (c *Context) WriteTemplateDir(fsys fs.FS, dir string, outPrefix string) err
 // templateData returns the data map passed to all templates.
 func (c *Context) templateData() map[string]any {
 	return map[string]any{
-		"ProjectName": c.ProjectName,
-		"ModulePath":  c.ModulePath,
-		"GoVersion":   c.GoVersion,
-		"Has":         c.Has,
-		"Injections":  c.Injections,
-		"Packages":    c.Packages,
+		"ProjectName":  c.ProjectName,
+		"ModulePath":   c.ModulePath,
+		"GoVersion":    c.GoVersion,
+		"Has":          c.Has,
+		"Packages":     c.Packages,
+		"ConfigFields": c.ConfigFields,
 	}
 }
 
 // templateFuncs returns custom template functions.
 func (c *Context) templateFuncs() template.FuncMap {
 	return template.FuncMap{
-		"has": c.Has,
+		"has":  c.Has,
 		"join": strings.Join,
-		"injections": func(name string) []string {
-			return c.Injections[name]
-		},
 	}
 }

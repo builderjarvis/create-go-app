@@ -19,9 +19,6 @@ import (
 {{- if has "httpclient"}}
 	"{{.ModulePath}}/pkg/client"
 {{- end}}
-{{- range injections "main_imports"}}
-	{{.}}
-{{- end}}
 )
 
 func main() {
@@ -61,10 +58,6 @@ func run(ctx context.Context, config *env.Config) error {
 	}
 
 	slog.InfoContext(ctx, "http client ready", "user_agent", httpClient.UserAgent())
-{{- end}}
-{{- range injections "main_init"}}
-
-	{{.}}
 {{- end}}
 {{- if not (has "postgres")}}
 	_ = config

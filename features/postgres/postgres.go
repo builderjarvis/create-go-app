@@ -26,5 +26,13 @@ func (p *Postgres) Conflicts() []string    { return nil }
 func (p *Postgres) Install(ctx *scaffold.Context) error {
 	ctx.AddPackage("github.com/jackc/pgx/v5")
 
+	ctx.AddConfig(scaffold.ConfigField{
+		Name:     "DatabaseURL",
+		Key:      "DATABASE_URL",
+		Value:    "postgres://localhost:5432/app",
+		Type:     "string",
+		Required: true,
+	})
+
 	return ctx.WriteTemplateDir(templates, "templates", "")
 }
