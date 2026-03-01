@@ -1,11 +1,15 @@
 package client
 
 import (
+	"compress/gzip"
+	"compress/zlib"
 	"fmt"
 	"io"
 	"log/slog"
 	"strings"
 
+	"github.com/andybalholm/brotli"
+	"github.com/klauspost/compress/zstd"
 	ehttp "github.com/enetx/http"
 	http "github.com/saucesteals/fhttp"
 )
@@ -116,8 +120,6 @@ func DefaultCookieExtractor(resp *http.Response) ([]*http.Cookie, error) {
 	return cookies, nil
 }
 
-// shouldRedirect returns (method, true) if the response is a redirect that
-// should be followed, or ("", false) otherwise.
 func (c *Client) shouldRedirect(resp *http.Response) (method string, ok bool) {
 	switch resp.StatusCode {
 	case http.StatusMovedPermanently, http.StatusFound, http.StatusSeeOther:
@@ -168,4 +170,41 @@ func (c *Client) redirectRequest(origin *http.Request, resp *http.Response, meth
 	}
 
 	return next, nil
+}
+
+// DecompressResponse decompresses an HTTP response body based on content-encoding.
+func DecompressResponse(body io.Reader, encoding string) (io.ReadCloser, error) {
+	if body == nil {
+		return nil, fmt.Errorf("body is nil")
+	}
+
+	if encoding == "" {
+		return io.NopCloser(body), nil
+	}
+
+	switch encoding {
+	case "deflate":
+		r, err := zlib.NewReader(body)
+		if err != nil {
+			return nil, fmt.Errorf("decompressing deflate: %w", err)
+		}
+		return r, nil
+	case "gzip":
+		r, err := gzip.NewReader(body)
+		if err != nil {
+			return nil, fmt.Errorf("decompressing gzip: %w", err)
+		}
+		return r, nil
+	case "br":
+		return io.NopCloser(brotli.NewReader(body)), nil
+	case "zstd":
+		decoder, err := zstd.NewReader(body)
+		if err != nil {
+			return nil, fmt.Errorf("decompressing zstd: %w", err)
+		}
+		return decoder.IOReadCloser(), nil
+	default:
+		slog.Warn("unknown encoding", "encoding", encoding)
+		return io.NopCloser(body), nil
+	}
 }

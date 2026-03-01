@@ -14,9 +14,6 @@ coverage.*
 *.coverprofile
 profile.cov
 
-# Dependency directories
-# vendor/
-
 # Go workspace file
 go.work
 go.work.sum
@@ -24,6 +21,5 @@ go.work.sum
 # env file
 .env
 
-# Editor/IDE
-# .idea/
-# .vscode/
+# Build output
+bin/

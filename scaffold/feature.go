@@ -105,7 +105,6 @@ func Resolve(selected []string) ([]Feature, error) {
 
 // topoSort returns features in dependency order using Kahn's algorithm.
 func topoSort(names map[string]bool) ([]Feature, error) {
-	// Build adjacency: feature -> features that depend on it.
 	inDegree := map[string]int{}
 	dependents := map[string][]string{}
 
@@ -123,14 +122,13 @@ func topoSort(names map[string]bool) ([]Feature, error) {
 		}
 	}
 
-	// Seed queue with zero in-degree nodes.
 	var queue []string
 	for name, deg := range inDegree {
 		if deg == 0 {
 			queue = append(queue, name)
 		}
 	}
-	sort.Strings(queue) // deterministic order
+	sort.Strings(queue)
 
 	var result []Feature
 	for len(queue) > 0 {

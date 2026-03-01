@@ -47,13 +47,9 @@ func (p *Proxy) String() string {
 type ProxyScheme string
 
 const (
-	// ProxySchemeHTTP routes traffic through an HTTP CONNECT proxy.
-	ProxySchemeHTTP ProxyScheme = "http"
-	// ProxySchemeHTTPS routes traffic through an HTTPS CONNECT proxy.
-	ProxySchemeHTTPS ProxyScheme = "https"
-	// ProxySchemeSOCKS5 routes traffic through a SOCKS5 proxy with local DNS resolution.
-	ProxySchemeSOCKS5 ProxyScheme = "socks5"
-	// ProxySchemeSOCKS5H routes traffic through a SOCKS5 proxy with remote DNS resolution.
+	ProxySchemeHTTP    ProxyScheme = "http"
+	ProxySchemeHTTPS   ProxyScheme = "https"
+	ProxySchemeSOCKS5  ProxyScheme = "socks5"
 	ProxySchemeSOCKS5H ProxyScheme = "socks5h"
 )
 
@@ -79,7 +75,6 @@ func ParseProxyScheme(scheme string) (ProxyScheme, error) {
 }
 
 // ParseProxy parses a "host:port" or "host:port:user:pass" string into a Proxy.
-// An empty string returns (nil, nil).
 func ParseProxy(proxy string, scheme ProxyScheme) (*Proxy, error) {
 	proxy = strings.TrimSpace(proxy)
 	if proxy == "" {

@@ -7,9 +7,18 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+{{- if or (has "postgres") (has "httpclient")}}
+	"fmt"
+{{- end}}
 
 	"{{.ModulePath}}/pkg/env"
 	_ "{{.ModulePath}}/pkg/log" // structured logger init
+{{- if has "postgres"}}
+	"{{.ModulePath}}/pkg/db"
+{{- end}}
+{{- if has "httpclient"}}
+	"{{.ModulePath}}/pkg/client"
+{{- end}}
 {{- range injections "main_imports"}}
 	{{.}}
 {{- end}}
@@ -33,10 +42,31 @@ func main() {
 
 func run(ctx context.Context, config *env.Config) error {
 	slog.InfoContext(ctx, "{{.ProjectName}} started")
-{{range injections "main_init"}}
+{{- if has "postgres"}}
+
+	database, err := db.New(ctx, config.DatabaseURL)
+	if err != nil {
+		return fmt.Errorf("create database: %w", err)
+	}
+	defer database.Close()
+{{- end}}
+{{- if has "httpclient"}}
+
+	// Example: create an HTTP client with no proxy.
+	httpClient, err := client.New(nil)
+	if err != nil {
+		return fmt.Errorf("create http client: %w", err)
+	}
+
+	slog.InfoContext(ctx, "http client ready", "user_agent", httpClient.UserAgent())
+{{- end}}
+{{- range injections "main_init"}}
+
 	{{.}}
-{{end}}
+{{- end}}
+{{- if not (has "postgres")}}
 	_ = config
+{{- end}}
 	_ = ctx
 
 	// TODO: Add your application logic here.

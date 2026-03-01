@@ -17,8 +17,8 @@ func init() {
 // CI adds a GitHub Actions CI workflow.
 type CI struct{}
 
-func (c *CI) Name() string        { return "ci" }
-func (c *CI) Description() string { return "GitHub Actions CI workflow" }
+func (c *CI) Name() string           { return "ci" }
+func (c *CI) Description() string    { return "GitHub Actions CI" }
 func (c *CI) Dependencies() []string { return nil }
 func (c *CI) Conflicts() []string    { return nil }
 

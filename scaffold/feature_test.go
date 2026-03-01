@@ -6,9 +6,9 @@ import (
 
 // stubFeature is a minimal Feature for testing.
 type stubFeature struct {
-	name         string
-	deps         []string
-	conflicts    []string
+	name      string
+	deps      []string
+	conflicts []string
 }
 
 func (f *stubFeature) Name() string           { return f.name }
@@ -18,7 +18,6 @@ func (f *stubFeature) Conflicts() []string    { return f.conflicts }
 func (f *stubFeature) Install(*Context) error { return nil }
 
 func TestResolve_ExpandsDeps(t *testing.T) {
-	// Save and restore registry.
 	orig := registry
 	defer func() { registry = orig }()
 	registry = map[string]Feature{}
@@ -103,7 +102,6 @@ func TestRegisterAndAll(t *testing.T) {
 	if len(all) != 2 {
 		t.Fatalf("expected 2 features, got %d", len(all))
 	}
-	// Should be sorted.
 	if all[0].Name() != "a" || all[1].Name() != "z" {
 		t.Errorf("expected sorted [a, z], got [%s, %s]", all[0].Name(), all[1].Name())
 	}

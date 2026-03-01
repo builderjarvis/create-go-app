@@ -27,10 +27,9 @@ type Context struct {
 	Active map[string]Feature
 
 	// Injections collects content that features inject into shared files.
-	// Key is the injection point name (e.g., "imports", "env_vars", "compose_services").
 	Injections map[string][]string
 
-	// GoModRequires collects go module requirements: "module version".
+	// GoModRequires collects go module requirements.
 	GoModRequires []string
 
 	// Packages collects package paths for `go get`.
@@ -81,7 +80,6 @@ func (c *Context) WriteTemplate(fsys fs.FS, tmplPath string, relPath string) err
 		return fmt.Errorf("execute template %s: %w", tmplPath, err)
 	}
 
-	// Skip writing empty files (allows conditional templates to produce nothing).
 	content := strings.TrimSpace(buf.String())
 	if content == "" {
 		return nil
@@ -91,7 +89,7 @@ func (c *Context) WriteTemplate(fsys fs.FS, tmplPath string, relPath string) err
 }
 
 // WriteTemplateDir walks an embed.FS directory and writes all files, rendering .tmpl files
-// as templates and stripping the .tmpl extension. The prefix is stripped from the output path.
+// as templates and stripping the .tmpl extension.
 func (c *Context) WriteTemplateDir(fsys fs.FS, dir string, outPrefix string) error {
 	return fs.WalkDir(fsys, dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -101,7 +99,6 @@ func (c *Context) WriteTemplateDir(fsys fs.FS, dir string, outPrefix string) err
 			return nil
 		}
 
-		// Strip the embed directory prefix to get relative output path.
 		rel := strings.TrimPrefix(path, dir+"/")
 		outPath := filepath.Join(outPrefix, rel)
 
@@ -110,7 +107,6 @@ func (c *Context) WriteTemplateDir(fsys fs.FS, dir string, outPrefix string) err
 			return c.WriteTemplate(fsys, path, outPath)
 		}
 
-		// Non-template file: copy as-is.
 		data, err := fs.ReadFile(fsys, path)
 		if err != nil {
 			return err

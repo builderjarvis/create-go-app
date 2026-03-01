@@ -18,7 +18,7 @@ func init() {
 type HTTPClient struct{}
 
 func (h *HTTPClient) Name() string        { return "httpclient" }
-func (h *HTTPClient) Description() string { return "HTTP client with TLS fingerprinting (fhttp + mimic)" }
+func (h *HTTPClient) Description() string { return "TLS fingerprinting with fhttp + mimic" }
 func (h *HTTPClient) Dependencies() []string { return nil }
 func (h *HTTPClient) Conflicts() []string    { return nil }
 

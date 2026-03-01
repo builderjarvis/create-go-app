@@ -45,9 +45,8 @@ func (c *cookieJar) Cookies(u *url.URL) []*http.Cookie {
 
 func toNetHTTPCookie(cookie *ehttp.Cookie) *http.Cookie {
 	return &http.Cookie{
-		Name:  cookie.Name,
-		Value: cookie.Value,
-		// Quoted:     cookie.Quoted,
+		Name:       cookie.Name,
+		Value:      cookie.Value,
 		Path:       cookie.Path,
 		Domain:     cookie.Domain,
 		Expires:    cookie.Expires,
@@ -56,17 +55,15 @@ func toNetHTTPCookie(cookie *ehttp.Cookie) *http.Cookie {
 		Secure:     cookie.Secure,
 		HttpOnly:   cookie.HttpOnly,
 		SameSite:   http.SameSite(cookie.SameSite),
-		// Partitioned: cookie.Partitioned,
-		Raw:      cookie.Raw,
-		Unparsed: cookie.Unparsed,
+		Raw:        cookie.Raw,
+		Unparsed:   cookie.Unparsed,
 	}
 }
 
 func toEnetxCookie(cookie *http.Cookie) *ehttp.Cookie {
 	return &ehttp.Cookie{
-		Name:  cookie.Name,
-		Value: cookie.Value,
-		// Quoted:     cookie.Quoted,
+		Name:       cookie.Name,
+		Value:      cookie.Value,
 		Path:       cookie.Path,
 		Domain:     cookie.Domain,
 		Expires:    cookie.Expires,
@@ -75,8 +72,7 @@ func toEnetxCookie(cookie *http.Cookie) *ehttp.Cookie {
 		Secure:     cookie.Secure,
 		HttpOnly:   cookie.HttpOnly,
 		SameSite:   ehttp.SameSite(cookie.SameSite),
-		// Partitioned: cookie.Partitioned,
-		Raw:      cookie.Raw,
-		Unparsed: cookie.Unparsed,
+		Raw:        cookie.Raw,
+		Unparsed:   cookie.Unparsed,
 	}
 }

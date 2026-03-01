@@ -50,7 +50,7 @@ func Generate(cfg Config) error {
 		ctx.Active[f.Name()] = f
 	}
 
-	// Install base project first.
+	// Install base project first (all utility packages).
 	if err := installBase(ctx); err != nil {
 		return fmt.Errorf("installing base: %w", err)
 	}

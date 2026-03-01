@@ -64,7 +64,6 @@ func (p BrowserPlatform) mimicPlatform() mimic.Platform {
 	case PlatformLinux:
 		return mimic.PlatformLinux
 	case PlatformIOS:
-		// temporary: mimic does not support ios directly yet.
 		return mimic.PlatformMac
 	default:
 		return mimic.PlatformWindows
@@ -72,15 +71,12 @@ func (p BrowserPlatform) mimicPlatform() mimic.Platform {
 }
 
 // CookieExtractor extracts cookies from an HTTP response.
-// Called after each round trip, including intermediate redirects.
-// The returned cookies are stored in the client's jar.
 type CookieExtractor func(resp *http.Response) ([]*http.Cookie, error)
 
 // Option configures a Client.
 type Option func(*Client)
 
 // WithCookieExtractor replaces the default Set-Cookie extraction.
-// Use this to handle non-standard cookie headers (e.g., custom JSON cookie headers).
 func WithCookieExtractor(fn CookieExtractor) Option {
 	return func(c *Client) {
 		c.extractCookies = fn
@@ -88,26 +84,21 @@ func WithCookieExtractor(fn CookieExtractor) Option {
 }
 
 // WithBrowserVersion sets the Chrome version for TLS fingerprinting.
-// Default: "144.0.0.0".
 func WithBrowserVersion(version string) Option {
 	return func(c *Client) { c.browserVersion = version }
 }
 
 // WithBrowserBrand sets the browser brand for TLS fingerprinting.
-// Default: BrandChrome.
 func WithBrowserBrand(brand BrowserBrand) Option {
 	return func(c *Client) { c.browserBrand = brand }
 }
 
 // WithBrowserPlatform sets the OS platform for TLS fingerprinting.
-// Default: PlatformWindows.
 func WithBrowserPlatform(platform BrowserPlatform) Option {
 	return func(c *Client) { c.browserPlatform = platform }
 }
 
 // WithClientHelloID sets the ClientHelloID for TLS fingerprinting.
-// Overrides the browser brand and platform.
-// Default: nil.
 func WithClientHelloID(id utls.ClientHelloID) Option {
 	return func(c *Client) { c.clientHelloID = &id }
 }
@@ -118,19 +109,16 @@ func WithDefaultHeaderOverrides(headers http.Header) Option {
 }
 
 // WithDisableSessionTickets disables session tickets.
-// Default: true.
 func WithDisableSessionTickets(disable bool) Option {
 	return func(c *Client) { c.disableSessionTickets = disable }
 }
 
 // WithDisableKeepAlives disables keep-alives.
-// Default: true.
 func WithDisableKeepAlives(disable bool) Option {
 	return func(c *Client) { c.disableKeepAlives = disable }
 }
 
 // WithInsecureSkipVerify disables TLS verification.
-// Default: true.
 func WithInsecureSkipVerify(insecure bool) Option {
 	return func(c *Client) { c.insecureSkipVerify = insecure }
 }
@@ -271,10 +259,6 @@ var supportedCurves = map[utls.CurveID]struct{}{
 	utls.X25519:    {},
 }
 
-// sanitizeCurves removes curves from the SupportedCurvesExtension that the
-// underlying TLS stack cannot negotiate. Randomized ClientHello specs may
-// include experimental or fake curves (e.g. Kyber drafts) that cause
-// "CurvePreferences includes unsupported curve" errors.
 func sanitizeCurves(spec *utls.ClientHelloSpec) {
 	for _, ext := range spec.Extensions {
 		sce, ok := ext.(*utls.SupportedCurvesExtension)

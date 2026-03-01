@@ -2,27 +2,32 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 
+	"github.com/charmbracelet/huh"
+	"github.com/charmbracelet/lipgloss"
+
 	"github.com/builderjarvis/create-go-app/scaffold"
 
 	// Register all features via blank imports.
 	_ "github.com/builderjarvis/create-go-app/features/ci"
-	_ "github.com/builderjarvis/create-go-app/features/cycle"
 	_ "github.com/builderjarvis/create-go-app/features/docker"
-	_ "github.com/builderjarvis/create-go-app/features/example"
 	_ "github.com/builderjarvis/create-go-app/features/httpclient"
 	_ "github.com/builderjarvis/create-go-app/features/postgres"
-	_ "github.com/builderjarvis/create-go-app/features/ptr"
-	_ "github.com/builderjarvis/create-go-app/features/retry"
-	_ "github.com/builderjarvis/create-go-app/features/state"
-	_ "github.com/builderjarvis/create-go-app/features/worker"
 )
+
+const banner = `
+                        _                                           
+  ___ _ __ ___  __ _| |_ ___        __ _  ___         __ _ _ __  _ __  
+ / __| '__/ _ \/ _` + "`" + ` | __/ _ \_____ / _` + "`" + ` |/ _ \ _____ / _` + "`" + ` | '_ \| '_ \ 
+| (__| | |  __/ (_| | ||  __/_____| (_| | (_) |_____| (_| | |_) | |_) |
+ \___|_|  \___|\__,_|\__\___|      \__, |\___/       \__,_| .__/| .__/ 
+                                   |___/                   |_|   |_|    
+`
 
 func main() {
 	if err := run(os.Args[1:]); err != nil {
@@ -32,39 +37,55 @@ func main() {
 }
 
 func run(args []string) error {
-	reader := bufio.NewReader(os.Stdin)
+	title := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("63")).
+		Render(banner)
+	fmt.Println(title)
 
-	// Project name from args or prompt.
-	var projectName string
+	// Defaults.
+	projectName := "my-app"
 	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		projectName = args[0]
-	} else {
-		projectName = prompt(reader, "Project name", "my-app")
 	}
 
-	// Module path.
-	defaultModule := "github.com/user/" + projectName
-	modulePath := prompt(reader, "Go module path", defaultModule)
-
-	// Go version.
+	modulePath := "github.com/user/" + projectName
 	goVersion := strings.TrimPrefix(runtime.Version(), "go")
 
-	fmt.Println()
-	fmt.Println("Optional features:")
-	fmt.Println()
-
-	// Show available features and let user select.
+	// Build feature options from registry.
 	allFeatures := scaffold.All()
-	selected := make([]string, 0)
-
-	for _, f := range allFeatures {
-		answer := prompt(reader, fmt.Sprintf("  Include %s? (%s)", f.Name(), f.Description()), "y/N")
-		if isYes(answer) {
-			selected = append(selected, f.Name())
-		}
+	featureOptions := make([]huh.Option[string], len(allFeatures))
+	for i, f := range allFeatures {
+		featureOptions[i] = huh.NewOption(
+			fmt.Sprintf("%s (%s)", f.Name(), f.Description()),
+			f.Name(),
+		)
 	}
 
-	fmt.Println()
+	var selectedFeatures []string
+
+	form := huh.NewForm(
+		huh.NewGroup(
+			huh.NewInput().
+				Title("What will your project be called?").
+				Value(&projectName).
+				Placeholder("my-app"),
+
+			huh.NewInput().
+				Title("What is your Go module path?").
+				Value(&modulePath).
+				Placeholder("github.com/user/my-app"),
+
+			huh.NewMultiSelect[string]().
+				Title("Which features would you like to include?").
+				Options(featureOptions...).
+				Value(&selectedFeatures),
+		),
+	).WithTheme(huh.ThemeCatppuccin())
+
+	if err := form.Run(); err != nil {
+		return fmt.Errorf("form: %w", err)
+	}
 
 	cwd, err := os.Getwd()
 	if err != nil {
@@ -75,11 +96,22 @@ func run(args []string) error {
 		ProjectName: projectName,
 		ModulePath:  modulePath,
 		GoVersion:   goVersion,
-		Features:    selected,
+		Features:    selectedFeatures,
 		OutputDir:   cwd,
 	}
 
-	fmt.Printf("Creating %s in %s...\n", projectName, filepath.Join(cwd, projectName))
+	// Summary.
+	fmt.Println()
+	summaryStyle := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("63"))
+	fmt.Println(summaryStyle.Render("  Creating project:"))
+	fmt.Printf("    Name:     %s\n", projectName)
+	fmt.Printf("    Module:   %s\n", modulePath)
+	fmt.Printf("    Path:     %s\n", filepath.Join(cwd, projectName))
+	if len(selectedFeatures) > 0 {
+		fmt.Printf("    Features: %s\n", strings.Join(selectedFeatures, ", "))
+	} else {
+		fmt.Printf("    Features: (base only)\n")
+	}
 	fmt.Println()
 
 	if err := scaffold.Generate(cfg); err != nil {
@@ -87,33 +119,13 @@ func run(args []string) error {
 	}
 
 	fmt.Println()
-	fmt.Println("✓ Project created successfully!")
+	success := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("42"))
+	fmt.Println(success.Render("  ✓ Project created successfully!"))
 	fmt.Println()
-	fmt.Printf("  cd %s\n", projectName)
-	fmt.Println("  cp .env.example .env")
-	fmt.Println("  make dev")
+	fmt.Printf("    cd %s\n", projectName)
+	fmt.Println("    cp .env.example .env")
+	fmt.Println("    make dev")
 	fmt.Println()
 
 	return nil
-}
-
-func prompt(reader *bufio.Reader, label string, defaultVal string) string {
-	if defaultVal != "" {
-		fmt.Printf("%s [%s]: ", label, defaultVal)
-	} else {
-		fmt.Printf("%s: ", label)
-	}
-
-	input, _ := reader.ReadString('\n')
-	input = strings.TrimSpace(input)
-
-	if input == "" {
-		return defaultVal
-	}
-	return input
-}
-
-func isYes(s string) bool {
-	s = strings.ToLower(strings.TrimSpace(s))
-	return s == "y" || s == "yes"
 }
