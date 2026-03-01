@@ -1,0 +1,27 @@
+// Package example is a skeleton service that demonstrates how to wire an HTTP
+// client and database together. Replace it with your own domain logic.
+package example
+
+import (
+	"{{.ModulePath}}/pkg/client"
+	"{{.ModulePath}}/pkg/db"
+)
+
+// Service orchestrates HTTP requests and database access for a single domain.
+type Service struct {
+	db     *db.DB
+	client *client.Client
+}
+
+// New creates a Service with an HTTP client configured for the given proxy.
+func New(db *db.DB, proxy *client.Proxy) (*Service, error) {
+	client, err := client.New(proxy)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Service{
+		db:     db,
+		client: client,
+	}, nil
+}

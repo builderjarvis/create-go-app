@@ -12,10 +12,10 @@ export
 
 # Docker Commands
 up:
-	docker compose up -d
+	docker compose --profile postgres up -d
 
 down:
-	docker compose down
+	docker compose --profile postgres down
 
 watch:
 	docker compose watch

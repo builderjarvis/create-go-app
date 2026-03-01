@@ -28,6 +28,7 @@ func (h *HTTPClient) Install(ctx *scaffold.Context) error {
 	ctx.AddPackage("github.com/refraction-networking/utls")
 	ctx.AddPackage("github.com/andybalholm/brotli")
 	ctx.AddPackage("github.com/klauspost/compress")
+	ctx.AddPackage("github.com/enetx/http")
 
 	return ctx.WriteTemplateDir(templates, "templates", "")
 }

@@ -23,5 +23,7 @@ func (s *State) Dependencies() []string { return nil }
 func (s *State) Conflicts() []string    { return nil }
 
 func (s *State) Install(ctx *scaffold.Context) error {
+	ctx.AddPackage("golang.org/x/sys")
+
 	return ctx.WriteTemplateDir(templates, "templates", "")
 }

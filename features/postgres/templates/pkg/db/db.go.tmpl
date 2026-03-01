@@ -1,4 +1,4 @@
-// Package db wraps pgxpool with transaction helpers.
+// Package db wraps pgxpool with transaction helpers and advisory lock support.
 //
 //go:generate sqlc generate -f sqlc.yaml
 package db
@@ -40,11 +40,46 @@ func (d *DB) Pool() *pgxpool.Pool {
 	return d.pool
 }
 
-// InTx executes fn inside a database transaction.
-func (d *DB) InTx(ctx context.Context, fn func(tx pgx.Tx) error) error {
+// AcquireConn returns a dedicated connection from the pool. The caller
+// must call Release on the returned *pgxpool.Conn when done. This is
+// useful for session-level operations like advisory locks.
+func (d *DB) AcquireConn(ctx context.Context) (*pgxpool.Conn, error) {
+	return d.pool.Acquire(ctx)
+}
+
+// TryAdvisoryLock attempts to acquire a session-level Postgres advisory
+// lock on the given connection. Returns true if the lock was acquired.
+func TryAdvisoryLock(ctx context.Context, conn *pgxpool.Conn, key int64) (bool, error) {
+	var locked bool
+	err := conn.QueryRow(ctx, "SELECT pg_try_advisory_lock($1)", key).Scan(&locked)
+	if err != nil {
+		return false, fmt.Errorf("pg_try_advisory_lock: %w", err)
+	}
+
+	return locked, nil
+}
+
+// Begin starts a transaction and returns the underlying pgx.Tx. The caller
+// is responsible for calling Commit or Rollback on the transaction.
+//
+// Prefer InTx for the common case. Use Begin when the transaction must span
+// multiple call sites or cannot be expressed as a single callback.
+func (d *DB) Begin(ctx context.Context) (pgx.Tx, error) {
 	tx, err := d.pool.Begin(ctx)
 	if err != nil {
-		return fmt.Errorf("begin transaction: %w", err)
+		return nil, fmt.Errorf("begin transaction: %w", err)
+	}
+
+	return tx, nil
+}
+
+// InTx executes fn inside a database transaction. The transaction is
+// automatically rolled back if fn returns an error or panics. On success
+// the transaction is committed.
+func (d *DB) InTx(ctx context.Context, fn func(tx pgx.Tx) error) error {
+	tx, err := d.Begin(ctx)
+	if err != nil {
+		return err
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
