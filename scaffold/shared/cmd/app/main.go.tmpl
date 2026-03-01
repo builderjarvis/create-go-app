@@ -12,7 +12,7 @@ import (
 {{- end}}
 
 	"{{.ModulePath}}/pkg/env"
-	_ "{{.ModulePath}}/pkg/log" // structured logger init
+	"{{.ModulePath}}/pkg/log"
 {{- if has "postgres"}}
 	"{{.ModulePath}}/pkg/db"
 {{- end}}
@@ -33,6 +33,8 @@ func main() {
 		slog.ErrorContext(ctx, "failed to load config", "error", err)
 		os.Exit(1)
 	}
+
+	slog.SetDefault(log.New(config.LogLevel))
 
 	if err := run(ctx, config); err != nil {
 		slog.ErrorContext(ctx, "failed to run", "error", err)

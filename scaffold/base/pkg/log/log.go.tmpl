@@ -1,5 +1,5 @@
-// Package log initializes the default slog logger with tint for colorized,
-// structured output and injects request-scoped values from context.
+// Package log provides a structured slog logger with tint for colorized output
+// and injects request-scoped values from context.
 package log
 
 import (
@@ -37,26 +37,24 @@ func (h *ContextHandler) Handle(ctx context.Context, r slog.Record) error {
 	return h.Handler.Handle(ctx, r)
 }
 
-func init() {
+// New creates and returns a new *slog.Logger at the given level string.
+// The caller is responsible for setting it as the default (e.g. slog.SetDefault).
+func New(level string) *slog.Logger {
 	w := os.Stdout
 
-	slog.SetDefault(slog.New(
+	return slog.New(
 		&ContextHandler{
 			Handler: tint.NewHandler(colorable.NewColorable(w), &tint.Options{
 				TimeFormat: "Mon, Jan 2 2006, 3:04:05 pm MST",
 				NoColor:    !isatty.IsTerminal(w.Fd()),
-				Level:      logLevelFromEnv(),
+				Level:      parseLevel(level),
 			}),
-		}),
+		},
 	)
 }
 
-func logLevelFromEnv() slog.Level {
-	switch strings.ToLower(
-		strings.TrimSpace(
-			os.Getenv("LOG_LEVEL"),
-		),
-	) {
+func parseLevel(level string) slog.Level {
+	switch strings.ToLower(strings.TrimSpace(level)) {
 	case "debug":
 		return slog.LevelDebug
 	case "info":
