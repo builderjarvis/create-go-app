@@ -49,21 +49,20 @@ func Generate(cfg Config) error {
 		ctx.Active[f.Name()] = f
 	}
 
-	// Install base project first (all utility packages).
-	if err := installBase(ctx); err != nil {
-		return fmt.Errorf("installing base: %w", err)
-	}
+	// Register base config fields and packages (no template writing yet).
+	installBase(ctx)
 
-	// Install each feature in dependency order.
+	// Install each feature in dependency order (features register their own
+	// config fields, packages, and write their own templates).
 	for _, f := range features {
 		if err := f.Install(ctx); err != nil {
 			return fmt.Errorf("installing feature %s: %w", f.Name(), err)
 		}
 	}
 
-	// Write shared files that depend on injections from all features.
-	if err := writeSharedFiles(ctx); err != nil {
-		return fmt.Errorf("writing shared files: %w", err)
+	// Write base templates last so they see all ConfigFields from features.
+	if err := writeBaseFiles(ctx); err != nil {
+		return fmt.Errorf("writing base files: %w", err)
 	}
 
 	// Initialize go module and tidy.

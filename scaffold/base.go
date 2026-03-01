@@ -7,9 +7,11 @@ import (
 //go:embed all:base
 var baseTemplates embed.FS
 
-// installBase writes the base project files that are always included.
-// This includes all utility packages (env, log, retry, worker, state, cycle, ptr).
-func installBase(ctx *Context) error {
+// installBase registers the base config fields and packages that are always
+// included. It does NOT write any template files yet — that happens in
+// writeBaseFiles after all features have had a chance to inject their own
+// config fields and packages.
+func installBase(ctx *Context) {
 	// Base logging packages.
 	ctx.AddPackage("github.com/lmittmann/tint")
 	ctx.AddPackage("github.com/mattn/go-colorable")
@@ -28,6 +30,11 @@ func installBase(ctx *Context) error {
 		Value: "info",
 		Type:  "string",
 	})
+}
 
+// writeBaseFiles renders all base templates into the project directory.
+// Called after all features have been installed so that ConfigFields and
+// Packages are fully populated before the templates are executed.
+func writeBaseFiles(ctx *Context) error {
 	return ctx.WriteTemplateDir(baseTemplates, "base", "")
 }
