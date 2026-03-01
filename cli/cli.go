@@ -9,7 +9,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/builderjarvis/create-go-app/internal/scaffold"
+	"github.com/builderjarvis/create-go-app/scaffold"
 )
 
 // Run is the main entry point for the CLI.

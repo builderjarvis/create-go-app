@@ -2,7 +2,7 @@
 package docker
 
 import (
-	"github.com/builderjarvis/create-go-app/internal/scaffold"
+	"github.com/builderjarvis/create-go-app/scaffold"
 )
 
 func init() {
