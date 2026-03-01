@@ -29,9 +29,6 @@ type Context struct {
 	// Injections collects content that features inject into shared files.
 	Injections map[string][]string
 
-	// GoModRequires collects go module requirements.
-	GoModRequires []string
-
 	// Packages collects package paths for `go get`.
 	Packages []string
 }

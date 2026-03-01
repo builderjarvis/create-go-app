@@ -1,65 +1,80 @@
 # create-go-app
 
-A scaffolder for Go projects with composable optional features. Inspired by [create-t3-app](https://github.com/t3-oss/create-t3-app).
+Scaffold production-ready Go projects with an interactive CLI and composable optional features.
 
-## Usage
-
-```bash
-go run github.com/builderjarvis/create-go-app@latest my-app
-```
-
-Or interactively:
+## Quick Start
 
 ```bash
 go run github.com/builderjarvis/create-go-app@latest
 ```
 
-## Features
+Or pass the project name directly:
 
-Each feature is self-contained. Adding a new feature = adding a new package, zero changes to existing code.
+```bash
+go run github.com/builderjarvis/create-go-app@latest my-app
+```
 
-| Feature | Description |
+The CLI prompts for your project name, module path, and feature selection — then generates a fully wired project with a `go.mod`, initial git commit, and working `make dev`.
+
+## Base (Always Included)
+
+Every project gets these packages out of the box:
+
+| Package | Description |
 |---------|-------------|
-| **postgres** | PostgreSQL with pgx, goose migrations, and sqlc |
-| **docker** | Dockerfile and Docker Compose |
-| **httpclient** | HTTP client with TLS fingerprinting (fhttp + mimic) |
-| **worker** | Bounded-concurrency worker pool |
-| **state** | File-backed JSON state persistence with file locking |
-| **retry** | Retry with exponential backoff and jitter |
+| `pkg/env` | Typed config from environment variables (`.env` support) |
+| `pkg/log` | Structured logging via `log/slog` + `tint` |
+| `pkg/retry` | Retry with exponential backoff and jitter |
+| `pkg/worker` | Bounded-concurrency worker pool (`x/sync`) |
+| `pkg/state` | File-backed JSON state with cross-platform file locking |
+| `pkg/cycle` | Lifecycle manager for graceful startup/shutdown |
+| `pkg/ptr` | Generic pointer helpers |
 
-Features declare dependencies and conflicts. The scaffolder automatically resolves the dependency graph and installs features in the correct order.
+## Optional Features
 
-## Generated Project Structure
+Select any combination during project creation:
+
+| Feature | What it adds |
+|---------|-------------|
+| **postgres** | `pkg/db` — pgx/v5 connection pool, goose migrations, sqlc config |
+| **docker** | `Dockerfile` + `compose.yaml` with hot-reload via `docker compose watch` |
+| **httpclient** | `pkg/client` — HTTP client with TLS fingerprinting (fhttp + mimic + uTLS) |
+| **ci** | `.github/workflows/ci.yaml` — GitHub Actions CI pipeline |
+
+## Feature Composition
+
+Features are aware of each other. Selecting multiple features produces a correctly integrated result:
+
+- **postgres + docker** → `compose.yaml` includes a `postgres` service (image: `postgres:17-alpine`) with health checks
+- **postgres** alone → `pkg/db` wired into `cmd/app/main.go` with connection setup and teardown
+- **httpclient** alone → `pkg/client` initialized in `main.go` with a ready-to-use client
+
+Dependencies are declared per-feature and resolved automatically. No manual wiring needed.
+
+## Generated Structure
 
 ```
 my-app/
-├── cmd/app/main.go          # Entry point
+├── cmd/app/main.go       # entry point, wired to selected features
 ├── pkg/
-│   ├── env/                  # Environment config (.env loading + typed Config)
-│   ├── log/                  # Structured logging (slog + tint)
-│   ├── db/                   # PostgreSQL (if selected)
-│   ├── client/               # HTTP client (if selected)
-│   ├── worker/               # Worker pool (if selected)
-│   ├── state/                # State persistence (if selected)
-│   └── retry/                # Retry with backoff (if selected)
+│   ├── env/              # config (always)
+│   ├── log/              # logging (always)
+│   ├── retry/            # retry (always)
+│   ├── worker/           # worker pool (always)
+│   ├── state/            # state persistence (always)
+│   ├── cycle/            # lifecycle (always)
+│   ├── ptr/              # pointer helpers (always)
+│   ├── db/               # postgres (if selected)
+│   └── client/           # httpclient (if selected)
 ├── Makefile
 ├── .env.example
-├── Dockerfile                # If docker selected
-├── compose.yaml              # If docker selected
-└── .gitignore
+├── .gitignore
+├── Dockerfile            # docker (if selected)
+├── compose.yaml          # docker (if selected)
+└── .github/workflows/
+    └── ci.yaml           # ci (if selected)
 ```
 
-## Architecture
+## License
 
-- **Feature interface**: Each feature implements `scaffold.Feature` with `Name()`, `Description()`, `Dependencies()`, `Conflicts()`, and `Install()`
-- **Injection points**: Features inject content into shared templates (imports, config fields, env vars, compose services, etc.)
-- **Two-pass rendering**: Base templates are written first, then features install their packages, then shared templates render with all injections
-- **Dependency resolution**: Topological sort with conflict detection
-- **`embed.FS` per feature**: Templates are co-located with feature code
-
-### Adding a New Feature
-
-1. Create `internal/features/myfeature/myfeature.go` implementing `scaffold.Feature`
-2. Create `internal/features/myfeature/templates/` with embedded template files
-3. Add `_ "github.com/builderjarvis/create-go-app/internal/features/myfeature"` to `cmd/create-go-app/main.go`
-4. Done. The registry picks it up automatically.
+MIT
